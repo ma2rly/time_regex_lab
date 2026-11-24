@@ -1,0 +1,24 @@
+test_interactive_input (test_time_finder.CommandLineTests.test_interactive_input) ... ok
+test_missing_file_returns_nonzero_status (test_time_finder.CommandLineTests.test_missing_file_returns_nonzero_status) ... ok
+test_text_argument_reports_validation_and_search (test_time_finder.CommandLineTests.test_text_argument_reports_validation_and_search) ... ok
+test_fetch_html_page_with_mock_server (test_time_finder.SourceTests.test_fetch_html_page_with_mock_server) ... ok
+test_html_parser_ignores_scripts_styles_and_head (test_time_finder.SourceTests.test_html_parser_ignores_scripts_styles_and_head) ... ok
+test_html_parser_preserves_inline_time (test_time_finder.SourceTests.test_html_parser_preserves_inline_time) ... ok
+test_missing_file_raises (test_time_finder.SourceTests.test_missing_file_raises) ... ok
+test_read_html_file (test_time_finder.SourceTests.test_read_html_file) ... ok
+test_read_utf8_text_file (test_time_finder.SourceTests.test_read_utf8_text_file) ... ok
+test_url_validation (test_time_finder.SourceTests.test_url_validation) ... ok
+test_search_does_not_extract_colon_chain_or_fractional_time (test_time_finder.TimeSearchTests.test_search_does_not_extract_colon_chain_or_fractional_time) ... ok
+test_search_finds_all_valid_times (test_time_finder.TimeSearchTests.test_search_finds_all_valid_times) ... ok
+test_search_respects_word_boundaries (test_time_finder.TimeSearchTests.test_search_respects_word_boundaries) ... ok
+test_search_returns_empty_list_for_no_matches (test_time_finder.TimeSearchTests.test_search_returns_empty_list_for_no_matches) ... ok
+test_search_skips_invalid_times (test_time_finder.TimeSearchTests.test_search_skips_invalid_times) ... ok
+test_correct_times (test_time_finder.TimeValidationTests.test_correct_times) ... ok
+test_incorrect_times (test_time_finder.TimeValidationTests.test_incorrect_times) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.004s
+
+OK
+
+Интеграционный HTTP-тест: OK (локальный веб-сервер, результат 06:07:08)
