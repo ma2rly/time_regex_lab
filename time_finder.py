@@ -7,15 +7,19 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+# Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
 TIME_CORE = r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
 TIME_FULL = re.compile(TIME_CORE)
+# При поиске исключаем совпадения внутри слов и более длинных значений.
 TIME_SEARCH = re.compile(rf"(?<![\w:]){TIME_CORE}(?![\w:]|\.[0-9])")
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
+# Из HTML-страниц извлекаем только текст, видимый пользователю.
 class VisibleTextParser(HTMLParser):
-
-    HIDDEN = frozenset({"head", "script", "style", "noscript", "template", "svg"})
+    HIDDEN = frozenset({
+        "head", "script", "style", "noscript", "template", "svg"
+    })
     BLOCK = frozenset({
         "address", "article", "aside", "blockquote", "br", "div", "footer",
         "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "li",
@@ -28,13 +32,17 @@ class VisibleTextParser(HTMLParser):
         self._parts: list[str] = []
         self._hidden: list[str] = []
 
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
         if tag in self.HIDDEN:
             self._hidden.append(tag)
         elif not self._hidden and tag in self.BLOCK:
             self._parts.append(" ")
 
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
         if not self._hidden and tag in self.BLOCK:
             self._parts.append(" ")
 
@@ -79,8 +87,11 @@ def read_file(path: str | Path) -> str:
 def fetch_webpage(url: str) -> str:
     parsed = urlsplit(url)
     if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Нужен полный адрес, начинающийся с http:// или https://")
+        raise ValueError(
+            "Нужен полный адрес, начинающийся с http:// или https://"
+        )
 
+    # Ограничиваем время ожидания и размер загружаемой страницы.
     request = Request(url, headers={"User-Agent": "TimeRegexLab/1.0"})
     with urlopen(request, timeout=10) as response:
         content_type = response.headers.get_content_type()
@@ -88,7 +99,7 @@ def fetch_webpage(url: str) -> str:
         raw = response.read(MAX_PAGE_BYTES + 1)
 
     if len(raw) > MAX_PAGE_BYTES:
-        raise ValueError("Размер веб-страницы превышает 5 МиБ")
+        raise ValueError("Размер веб-страницы превышает 5 МБ")
     content = raw.decode(encoding, errors="replace")
     if content_type in {"text/html", "application/xhtml+xml"}:
         return extract_visible_text(content)
@@ -96,12 +107,20 @@ def fetch_webpage(url: str) -> str:
 
 
 def interactive_input() -> tuple[str, str]:
-    print("Источник данных: 1 — ввод, 2 — файл, 3 — веб-страница")
+    # Символ \n внутри строки переносит следующий пункт на новую строку.
+    print(
+        "Источник данных:\n"
+        "1. Ввод\n"
+        "2. Файл\n"
+        "3. Веб-страница"
+    )
     choice = input("Выберите 1, 2 или 3: ").strip()
     if choice == "1":
         print("Формат времени: ЧЧ:ММ:СС (например, 14:30:05).")
         print("Часы: 00–23, минуты и секунды: 00–59.")
-        print("Можно ввести одно время или текст с несколькими значениями времени.")
+        print(
+            "Можно ввести одно время или текст с несколькими значениями времени."
+        )
         return "text", input("Введите время или текст: ")
     if choice == "2":
         return "file", input("Укажите путь к файлу: ").strip()
@@ -116,10 +135,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--text", help="Текст для проверки и поиска")
-    source.add_argument("--file", help="Путь к текстовому или HTML-файлу в UTF-8")
+    source.add_argument(
+        "--file", help="Путь к текстовому или HTML-файлу в UTF-8"
+    )
     source.add_argument("--url", help="Полный URL веб-страницы (HTTP/HTTPS)")
     args = parser.parse_args(argv)
 
+    # Выбираем источник: аргумент командной строки или меню.
     if args.text is not None:
         kind, value = "text", args.text
     elif args.file is not None:
@@ -136,7 +158,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if kind == "text":
             content = value
-            print("Проверка всей строки:", "корректно" if is_valid_time(content) else "некорректно")
+            status = "корректно" if is_valid_time(content) else "некорректно"
+            print("Проверка всей строки:", status)
         elif kind == "file":
             content = read_file(value)
         else:
@@ -146,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Ошибка обработки: {error}")
         return 1
 
+    # Выводим количество найденных значений и каждое совпадение.
     if matches:
         print(f"Найдено значений времени: {len(matches)}")
         for index, time_value in enumerate(matches, start=1):
