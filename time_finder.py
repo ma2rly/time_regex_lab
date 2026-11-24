@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-#Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
+# Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
 TIME_CORE = r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
 TIME_FULL = re.compile(TIME_CORE)
 # При поиске исключаем совпадения внутри слов и более длинных значений.
@@ -15,7 +15,7 @@ TIME_SEARCH = re.compile(rf"(?<![\w:]){TIME_CORE}(?![\w:]|\.[0-9])")
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
-#Из HTML-страниц извлекаем только текст, видимый пользователю.
+# Из HTML извлекаем текст, пропуская некоторые служебные теги.
 class VisibleTextParser(HTMLParser):
     HIDDEN = frozenset({
         "head", "script", "style", "noscript", "template", "svg"
@@ -91,7 +91,7 @@ def fetch_webpage(url: str) -> str:
             "Нужен полный адрес, начинающийся с http:// или https://"
         )
 
-    #Ограничиваем время ожидания и размер загружаемой страницы.
+    # Ограничиваем время ожидания и размер загружаемой страницы.
     request = Request(url, headers={"User-Agent": "TimeRegexLab/1.0"})
     with urlopen(request, timeout=10) as response:
         content_type = response.headers.get_content_type()
@@ -107,26 +107,71 @@ def fetch_webpage(url: str) -> str:
 
 
 def interactive_input() -> tuple[str, str]:
-    print(
-        "Источник данных:\n"
-        "1. Ввод\n"
-        "2. Файл\n"
-        "3. Веб-страница"
-    )
-    choice = input("Выберите 1, 2 или 3: ").strip()
-    if choice == "1":
-        print("Формат времени: ЧЧ:ММ:СС (например, 14:30:05).")
-        print("Часы: 00–23, минуты и секунды: 00–59.")
-        print(
-            "Можно ввести одно время или текст с несколькими "
-            "значениями времени."
-        )
-        return "text", input("Введите время или текст: ")
-    if choice == "2":
-        return "file", input("Укажите путь к файлу: ").strip()
-    if choice == "3":
-        return "url", input("Укажите URL (http/https): ").strip()
-    raise ValueError("Неизвестный пункт меню; выберите 1, 2 или 3")
+    # Меню повторяется до корректного выбора или команды выхода.
+    while True:
+        print("\n" + "=" * 52)
+        print("ПОИСК И ПРОВЕРКА ВРЕМЕНИ — ЧЧ:ММ:СС")
+        print("=" * 52)
+        print("1. Проверить введённое время или найти время в тексте")
+        print("2. Найти время в файле (TXT, HTML)")
+        print("3. Найти время на веб-странице (URL)")
+        print("0. Выход")
+        print("-" * 52)
+        choice = input("Выберите пункт [0–3]: ").strip()
+
+        if choice == "0":
+            return "exit", ""
+        if choice == "1":
+            print("\nФормат: ЧЧ:ММ:СС (например, 14:30:05).")
+            print("Часы — 00–23; минуты и секунды — 00–59.")
+            print("Можно ввести одно время или предложение с несколькими.")
+            value = input("Введите время или текст: ")
+            if value.strip():
+                return "text", value
+            print("Ошибка: пустой ввод. Повторите попытку.")
+        elif choice == "2":
+            print("\nПоддерживаются TXT, HTML и HTM в кодировке UTF-8.")
+            print("Пример: schedule.txt или C:\\data\\schedule.txt")
+            value = input("Путь к файлу: ").strip().strip('"')
+            if value:
+                return "file", value
+            print("Ошибка: путь к файлу не указан.")
+        elif choice == "3":
+            print("\nПример адреса: https://example.org/schedule")
+            value = input("URL страницы: ").strip()
+            if value:
+                return "url", value
+            print("Ошибка: URL не указан.")
+        else:
+            print("Ошибка: выберите 0, 1, 2 или 3.")
+
+
+def process_source(kind: str, value: str) -> int:
+    # Обработка текста едина для ввода, файлов и веб-страниц.
+    try:
+        if kind == "text":
+            content = value
+        elif kind == "file":
+            content = read_file(value)
+        else:
+            content = fetch_webpage(value)
+        matches = find_times(content)
+    except (OSError, UnicodeError, ValueError, LookupError) as error:
+        print(f"\nОшибка обработки: {error}")
+        return 1
+
+    print("\n" + "-" * 20 + " РЕЗУЛЬТАТ " + "-" * 20)
+    if kind == "text":
+        status = "корректно" if is_valid_time(content) else "некорректно"
+        print("Проверка всей строки:", status)
+    if matches:
+        print(f"Найдено значений времени: {len(matches)}")
+        for index, time_value in enumerate(matches, start=1):
+            print(f"{index}. {time_value}")
+    else:
+        print("Корректное время в формате ЧЧ:ММ:СС не найдено.")
+    print("-" * 51)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,42 +186,26 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--url", help="Полный URL веб-страницы (HTTP/HTTPS)")
     args = parser.parse_args(argv)
 
-    #Выбираем источник: аргумент командной строки или меню.
+    # Аргументы командной строки запускают один поиск без меню.
     if args.text is not None:
-        kind, value = "text", args.text
-    elif args.file is not None:
-        kind, value = "file", args.file
-    elif args.url is not None:
-        kind, value = "url", args.url
-    else:
+        return process_source("text", args.text)
+    if args.file is not None:
+        return process_source("file", args.file)
+    if args.url is not None:
+        return process_source("url", args.url)
+
+    # В интерактивном режиме можно выполнять несколько поисков подряд.
+    print("Добро пожаловать! Программа ищет время от 00:00:00 до 23:59:59.")
+    while True:
         try:
             kind, value = interactive_input()
-        except (EOFError, ValueError) as error:
-            print(f"Ошибка ввода: {error}")
-            return 1
-
-    try:
-        if kind == "text":
-            content = value
-            status = "корректно" if is_valid_time(content) else "некорректно"
-            print("Проверка всей строки:", status)
-        elif kind == "file":
-            content = read_file(value)
-        else:
-            content = fetch_webpage(value)
-        matches = find_times(content)
-    except (OSError, UnicodeError, ValueError, LookupError) as error:
-        print(f"Ошибка обработки: {error}")
-        return 1
-
-    #Выводим количество найденных значений и каждое совпадение.
-    if matches:
-        print(f"Найдено значений времени: {len(matches)}")
-        for index, time_value in enumerate(matches, start=1):
-            print(f"{index}. {time_value}")
-    else:
-        print("Корректное время в формате ЧЧ:ММ:СС не найдено.")
-    return 0
+        except (EOFError, KeyboardInterrupt):
+            print("\nВвод завершён. До свидания!")
+            return 0
+        if kind == "exit":
+            print("Работа завершена.")
+            return 0
+        process_source(kind, value)
 
 
 if __name__ == "__main__":
