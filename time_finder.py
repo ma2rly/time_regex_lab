@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-# Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
+#Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
 TIME_CORE = r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
 TIME_FULL = re.compile(TIME_CORE)
 # При поиске исключаем совпадения внутри слов и более длинных значений.
@@ -15,7 +15,7 @@ TIME_SEARCH = re.compile(rf"(?<![\w:]){TIME_CORE}(?![\w:]|\.[0-9])")
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
-# Из HTML-страниц извлекаем только текст, видимый пользователю.
+#Из HTML-страниц извлекаем только текст, видимый пользователю.
 class VisibleTextParser(HTMLParser):
     HIDDEN = frozenset({
         "head", "script", "style", "noscript", "template", "svg"
@@ -91,7 +91,7 @@ def fetch_webpage(url: str) -> str:
             "Нужен полный адрес, начинающийся с http:// или https://"
         )
 
-    # Ограничиваем время ожидания и размер загружаемой страницы.
+    #Ограничиваем время ожидания и размер загружаемой страницы.
     request = Request(url, headers={"User-Agent": "TimeRegexLab/1.0"})
     with urlopen(request, timeout=10) as response:
         content_type = response.headers.get_content_type()
@@ -107,7 +107,6 @@ def fetch_webpage(url: str) -> str:
 
 
 def interactive_input() -> tuple[str, str]:
-    # Символ \n внутри строки переносит следующий пункт на новую строку.
     print(
         "Источник данных:\n"
         "1. Ввод\n"
@@ -142,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--url", help="Полный URL веб-страницы (HTTP/HTTPS)")
     args = parser.parse_args(argv)
 
-    # Выбираем источник: аргумент командной строки или меню.
+    #Выбираем источник: аргумент командной строки или меню.
     if args.text is not None:
         kind, value = "text", args.text
     elif args.file is not None:
@@ -170,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Ошибка обработки: {error}")
         return 1
 
-    # Выводим количество найденных значений и каждое совпадение.
+    #Выводим количество найденных значений и каждое совпадение.
     if matches:
         print(f"Найдено значений времени: {len(matches)}")
         for index, time_value in enumerate(matches, start=1):
