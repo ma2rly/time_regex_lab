@@ -7,15 +7,15 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-# Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59.
+# Проверяем время в 24-часовом формате: от 00:00:00 до 23:59:59
 TIME_CORE = r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
 TIME_FULL = re.compile(TIME_CORE)
-# При поиске исключаем совпадения внутри слов и более длинных значений.
+# При поиске исключаем совпадения внутри слов и более длинных значений
 TIME_SEARCH = re.compile(rf"(?<![\w:]){TIME_CORE}(?![\w:]|\.[0-9])")
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
-# Из HTML извлекаем текст, пропуская некоторые служебные теги.
+# Из HTML извлекаем текст, пропуская некоторые служебные теги
 class VisibleTextParser(HTMLParser):
     HIDDEN = frozenset({
         "head", "script", "style", "noscript", "template", "svg"
@@ -91,7 +91,7 @@ def fetch_webpage(url: str) -> str:
             "Нужен полный адрес, начинающийся с http:// или https://"
         )
 
-    # Ограничиваем время ожидания и размер загружаемой страницы.
+    # Ограничиваем время ожидания и размер загружаемой страницы
     request = Request(url, headers={"User-Agent": "TimeRegexLab/1.0"})
     with urlopen(request, timeout=10) as response:
         content_type = response.headers.get_content_type()
@@ -107,7 +107,7 @@ def fetch_webpage(url: str) -> str:
 
 
 def interactive_input() -> tuple[str, str]:
-    # Меню повторяется до корректного выбора или команды выхода.
+    # Меню повторяется до корректного выбора или команды выхода
     while True:
         print("\n" + "=" * 52)
         print("ПОИСК И ПРОВЕРКА ВРЕМЕНИ — ЧЧ:ММ:СС")
@@ -147,7 +147,7 @@ def interactive_input() -> tuple[str, str]:
 
 
 def process_source(kind: str, value: str) -> int:
-    # Обработка текста едина для ввода, файлов и веб-страниц.
+    # Обработка текста едина для ввода, файлов и веб-страниц
     try:
         if kind == "text":
             content = value
@@ -186,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--url", help="Полный URL веб-страницы (HTTP/HTTPS)")
     args = parser.parse_args(argv)
 
-    # Аргументы командной строки запускают один поиск без меню.
+    # Аргументы командной строки запускают один поиск без меню
     if args.text is not None:
         return process_source("text", args.text)
     if args.file is not None:
@@ -194,13 +194,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.url is not None:
         return process_source("url", args.url)
 
-    # В интерактивном режиме можно выполнять несколько поисков подряд.
-    print("Добро пожаловать! Программа ищет время от 00:00:00 до 23:59:59.")
+    # В интерактивном режиме можно выполнять несколько поисков подряд
+    print("Программа ищет время от 00:00:00 до 23:59:59.")
     while True:
         try:
             kind, value = interactive_input()
         except (EOFError, KeyboardInterrupt):
-            print("\nВвод завершён. До свидания!")
+            print("\nВвод завершён.")
             return 0
         if kind == "exit":
             print("Работа завершена.")
